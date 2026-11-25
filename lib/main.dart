@@ -14,9 +14,9 @@ class MyHealthApp extends StatelessWidget {
   final bool initialLoggedIn;
   const MyHealthApp({super.key, required this.initialLoggedIn});
 
-  static const Color green = Color(0xFF159B68);
-  static const Color darkGreen = Color(0xFF174B37);
-  static const Color background = Color(0xFFF5FAF7);
+  static const Color orangeNeon = Color(0xFFFF5520);
+  static const Color amberGlow = Color(0xFFFF9F1C);
+  static const Color background = Color(0xFF0A0A0C);
 
   @override
   Widget build(BuildContext context) {
@@ -25,74 +25,70 @@ class MyHealthApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
         scaffoldBackgroundColor: background,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: green,
-          brightness: Brightness.light,
-          primary: green,
-          secondary: const Color(0xFF80CFA9),
-          surface: Colors.white,
+          seedColor: orangeNeon,
+          brightness: Brightness.dark,
+          primary: orangeNeon,
+          secondary: amberGlow,
+          surface: const Color(0xFF151519),
           onPrimary: Colors.white,
-          onSurface: darkGreen,
+          onSurface: Colors.white,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: background,
-          foregroundColor: darkGreen,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: false,
           surfaceTintColor: Colors.transparent,
         ),
         textTheme: const TextTheme(
-          headlineSmall: TextStyle(color: darkGreen, fontWeight: FontWeight.w800),
-          titleLarge: TextStyle(color: darkGreen, fontWeight: FontWeight.w700),
-          titleMedium: TextStyle(color: darkGreen, fontWeight: FontWeight.w600),
-          bodyLarge: TextStyle(color: Color(0xFF365347)),
-          bodyMedium: TextStyle(color: Color(0xFF526B5E)),
+          headlineSmall: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+          titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          bodyLarge: TextStyle(color: Color(0xFFE4E4E7)),
+          bodyMedium: TextStyle(color: Color(0xFF9A9AA2)),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFFF7FBF8),
-          labelStyle: const TextStyle(color: Color(0xFF718078)),
-          prefixIconColor: green,
+          fillColor: Colors.white.withValues(alpha: 0.06),
+          labelStyle: const TextStyle(color: Color(0xFF9A9AA2)),
+          prefixIconColor: orangeNeon,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE1ECE6)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE1ECE6)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: green, width: 1.7),
+            borderSide: const BorderSide(color: orangeNeon, width: 1.7),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: green,
+            backgroundColor: orangeNeon,
             foregroundColor: Colors.white,
-            elevation: 1,
+            elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: green,
-            side: const BorderSide(color: Color(0xFFB8DDC9)),
+            foregroundColor: orangeNeon,
+            side: BorderSide(color: orangeNeon.withValues(alpha: 0.5)),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 1,
-          shadowColor: const Color(0x14174B37),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF1E1E24),
+          contentTextStyle: const TextStyle(color: Colors.white),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),

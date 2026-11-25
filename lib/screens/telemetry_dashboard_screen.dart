@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'dart:ui' as ui;
 import '../models/user_model.dart';
 import '../models/workout_session.dart';
 import '../services/auth_service.dart';
 import '../services/permission_service.dart';
 import '../services/workout_storage_service.dart';
+import '../widgets/liquid_glass_widgets.dart';
 
 class TelemetryDashboardScreen extends StatefulWidget {
   final bool isTabActive;
@@ -36,19 +37,16 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
 
   UserModel? _currentUser;
 
-  // Estado de sesión de entrenamiento
   bool _isWorkoutRunning = false;
   bool _isPausedByLifecycle = false;
   int _elapsedSeconds = 0;
   Timer? _clockTimer;
 
-  // Subscripciones de Hardware
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<GyroscopeEvent>? _gyroSub;
   StreamSubscription<StepCount>? _stepSub;
   StreamSubscription<Position>? _gpsSub;
 
-  // Datos de Acelerómetro
   double _ax = 0.0, _ay = 0.0, _az = 0.0;
   double _accelMagnitude = 9.8;
   String _currentIntensity = 'Descanso';
@@ -58,15 +56,12 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
     'Trote': 0,
   };
 
-  // Datos de Giroscopio
   double _gx = 0.0, _gy = 0.0, _gz = 0.0;
 
-  // Datos de Podómetro
   int? _initialRawSteps;
   int _sessionSteps = 0;
 
-  // Datos de GPS y Mapa
-  LatLng _currentLatLng = const LatLng(19.4326, -99.1332); // Coordenada inicial por defecto
+  LatLng _currentLatLng = const LatLng(19.4326, -99.1332);
   bool _hasGpsFix = false;
   final List<LatLng> _routePoints = [];
 
@@ -80,7 +75,6 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
   @override
   void didUpdateWidget(covariant TelemetryDashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Optimización de batería al cambiar de pestaña en NavigationBar
     if (oldWidget.isTabActive && !widget.isTabActive && _isWorkoutRunning) {
       _pauseHardwareStreams();
       setState(() => _isPausedByLifecycle = true);
@@ -157,14 +151,12 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
   void _resumeHardwareStreams() {
     _cancelAllSubscriptions();
 
-    // 1. Acelerómetro (Sensores Plus)
     _accelSub = accelerometerEventStream(
       samplingPeriod: SensorInterval.uiInterval,
     ).listen((event) {
       final magnitude = math.sqrt(
         event.x * event.x + event.y * event.y + event.z * event.z,
       );
-      // Descontamos gravedad base (~9.8 m/s²) para medir aceleración dinámica neta
       final dynamicAccel = (magnitude - 9.81).abs();
 
       String intensity;
@@ -189,7 +181,6 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
       }
     });
 
-    // 2. Giroscopio (Sensores Plus)
     _gyroSub = gyroscopeEventStream(
       samplingPeriod: SensorInterval.uiInterval,
     ).listen((event) {
@@ -202,7 +193,6 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
       }
     });
 
-    // 3. Podómetro (Pedometer)
     _stepSub = Pedometer.stepCountStream.listen(
           (StepCount event) {
         if (!mounted) return;
@@ -212,15 +202,12 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
           _sessionSteps = delta >= 0 ? delta : 0;
         });
       },
-      onError: (_) {
-        // Algunos emuladores no reportan hardware step counter; se mantiene en 0 sin romper la UI
-      },
+      onError: (_) {},
     );
 
-    // 4. GPS y Geolocalización en Tiempo Real (Geolocator)
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 3, // Actualiza cada 3 metros de desplazamiento
+      distanceFilter: 3,
     );
 
     _gpsSub = Geolocator.getPositionStream(
@@ -257,7 +244,6 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
     _clockTimer?.cancel();
     _cancelAllSubscriptions();
 
-    // Determinar intensidad predominante
     String dominant = 'Descanso';
     int maxSamples = -1;
     _intensityCounts.forEach((key, count) {
@@ -293,7 +279,7 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Entrenamiento guardado en el Historial local.'),
-        backgroundColor: Color(0xFF159B68),
+        backgroundColor: Color(0xFFFF5520),
       ),
     );
   }
@@ -307,11 +293,11 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
   Color _intensityColor(String intensity) {
     switch (intensity) {
       case 'Trote':
-        return const Color(0xFF159B68);
+        return const Color(0xFFFF5520);
       case 'Caminata':
-        return const Color(0xFF159B68);
+        return const Color(0xFFFF9F1C);
       default:
-        return const Color(0xFF718078);
+        return const Color(0xFF9A9AA2);
     }
   }
 
@@ -323,7 +309,6 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
     return 'Rotación Izquierda (Roll -)';
   }
 
-
   @override
   Widget build(BuildContext context) {
     final stride = _currentUser?.strideLengthMeters ?? 0.74;
@@ -332,401 +317,412 @@ class _TelemetryDashboardScreenState extends State<TelemetryDashboardScreen>
         ? '${(distanceMeters / 1000).toStringAsFixed(2)} km'
         : '${distanceMeters.toStringAsFixed(1)} m';
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Cabecera y estado de batería/sensores
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Telemetría en Vivo',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF18352A),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0.75, -0.65),
+          radius: 1.15,
+          colors: [
+            Color(0x38FF5520), // Halo naranja neón para refracción Liquid Glass
+            Color(0xFF0A0A0C), // Fondo negro profundo
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Cabecera y estado de batería/sensores
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Telemetría en Vivo',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
+                      Text(
+                        _isWorkoutRunning
+                            ? (_isPausedByLifecycle
+                            ? 'Sensores en pausa (Ahorro de batería)'
+                            : 'Capturando hardware en tiempo real')
+                            : 'Listo para iniciar sesión',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isWorkoutRunning
+                              ? const Color(0xFFFF5520)
+                              : const Color(0xFF9A9AA2),
+                        ),
+                      ),
+                    ],
+                  ),
+                  LiquidGlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    borderRadius: 16,
+                    highlightBorder: _isWorkoutRunning,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_outlined,
+                            size: 18, color: Color(0xFFFF5520)),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatDuration(_elapsedSeconds),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      _isWorkoutRunning
-                          ? (_isPausedByLifecycle
-                          ? 'Sensores en pausa (Ahorro de batería)'
-                          : 'Capturando hardware en tiempo real')
-                          : 'Listo para iniciar sesión',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _isWorkoutRunning
-                            ? const Color(0xFF159B68)
-                            : const Color(0xFF718078),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Widget Liquid Glass Hero de Pasos y Rachas
+              StreakHeroLiquidCard(
+                currentSteps: _sessionSteps,
+                activeDays: 28,
+                streakDays: 16,
+              ),
+              const SizedBox(height: 14),
+
+              // Mapa GPS Interactivo
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    width: 1.2,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _currentLatLng,
+                        initialZoom: 16.0,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.my_health',
+                        ),
+                        if (_routePoints.length >= 2)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: _routePoints,
+                                color: const Color(0xFFFF5520),
+                                strokeWidth: 5.0,
+                              ),
+                            ],
+                          ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _currentLatLng,
+                              width: 36,
+                              height: 36,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5520)
+                                      .withValues(alpha: 0.35),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.my_location,
+                                    color: Color(0xFFFF5520),
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      child: LiquidGlassCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        borderRadius: 12,
+                        child: Text(
+                          _hasGpsFix
+                              ? 'GPS: ${_currentLatLng.latitude.toStringAsFixed(5)}, ${_currentLatLng.longitude.toStringAsFixed(5)}'
+                              : 'GPS: Esperando señal satelital...',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF159B68)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.timer_outlined,
-                          size: 18, color: Color(0xFF159B68)),
-                      const SizedBox(width: 6),
-                      Text(
-                        _formatDuration(_elapsedSeconds),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                          color: Color(0xFF18352A),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Mapa GPS Interactivo (OpenStreetMap + Polyline)
-            Container(
-              height: 230,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE1ECE6)),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
+              const SizedBox(height: 14),
+
+              // Tarjeta 1: Podómetro y Distancia
+              Row(
                 children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _currentLatLng,
-                      initialZoom: 16.0,
+                  Expanded(
+                    child: _MetricCard(
+                      title: 'PASOS SESIÓN',
+                      value: '$_sessionSteps',
+                      subtitle: 'Sensor Podómetro',
+                      icon: Icons.directions_walk,
+                      accentColor: const Color(0xFFFF5520),
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.My health',
-                      ),
-                      if (_routePoints.length >= 2)
-                        PolylineLayer(
-                          polylines: [
-                            Polyline(
-                              points: _routePoints,
-                              color: const Color(0xFF159B68),
-                              strokeWidth: 5.0,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricCard(
+                      title: 'DISTANCIA EST.',
+                      value: distanceText,
+                      subtitle: 'Zancada: ${(stride * 100).toInt()} cm',
+                      icon: Icons.straighten,
+                      accentColor: const Color(0xFFFF9F1C),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Tarjeta 2: Acelerómetro Triaxial e Intensidad
+              LiquidGlassCard(
+                padding: const EdgeInsets.all(16),
+                borderRadius: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.speed,
+                                color: Color(0xFFFF5520), size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Acelerómetro Triaxial (m/s²)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: _currentLatLng,
-                            width: 36,
-                            height: 36,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF159B68)
-                                    .withValues(alpha: 0.3),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.my_location,
-                                  color: Color(0xFF159B68),
-                                  size: 22,
-                                ),
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _intensityColor(_currentIntensity)
+                                .withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _intensityColor(_currentIntensity),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5FAF7).withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        _hasGpsFix
-                            ? 'GPS: ${_currentLatLng.latitude.toStringAsFixed(5)}, ${_currentLatLng.longitude.toStringAsFixed(5)}'
-                            : 'GPS: Esperando señal satelital...',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF159B68),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Tarjeta 1: Podómetro y Distancia
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    title: 'PASOS SESIÓN',
-                    value: '$_sessionSteps',
-                    subtitle: 'Sensor Podómetro',
-                    icon: Icons.directions_walk,
-                    accentColor: const Color(0xFF159B68),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MetricCard(
-                    title: 'DISTANCIA EST.',
-                    value: distanceText,
-                    subtitle: 'Zancada: ${(stride * 100).toInt()} cm',
-                    icon: Icons.straighten,
-                    accentColor: const Color(0xFF159B68),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Tarjeta 2: Acelerómetro Triaxial e Intensidad
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE1ECE6)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.speed, color: Color(0xFF159B68), size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Acelerómetro Triaxial (m/s²)',
+                          child: Text(
+                            _currentIntensity.toUpperCase(),
                             style: TextStyle(
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF18352A),
+                              color: _intensityColor(_currentIntensity),
                             ),
                           ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _intensityColor(_currentIntensity)
-                              .withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _intensityColor(_currentIntensity),
-                          ),
                         ),
-                        child: Text(
-                          _currentIntensity.toUpperCase(),
-                          style: TextStyle(
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _AxisBadge(label: 'Eje X', value: _ax),
+                        _AxisBadge(label: 'Eje Y', value: _ay),
+                        _AxisBadge(label: 'Eje Z', value: _az),
+                        _AxisBadge(label: '|Mag|', value: _accelMagnitude),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Tarjeta 3: Giroscopio y Orientación
+              LiquidGlassCard(
+                padding: const EdgeInsets.all(16),
+                borderRadius: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.screen_rotation_alt,
+                                color: Color(0xFFFF9F1C), size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Giroscopio (rad/s)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _deviceTiltLabel(),
+                          style: const TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: _intensityColor(_currentIntensity),
+                            color: Color(0xFF9A9AA2),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _AxisBadge(label: 'Eje X', value: _ax),
-                      _AxisBadge(label: 'Eje Y', value: _ay),
-                      _AxisBadge(label: 'Eje Z', value: _az),
-                      _AxisBadge(label: '|Mag|', value: _accelMagnitude),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Tarjeta 3: Giroscopio y Orientación
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE1ECE6)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.screen_rotation_alt,
-                              color: Color(0xFF159B68), size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Giroscopio (rad/s)',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF18352A),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        _deviceTiltLabel(),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF718078),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _AxisBadge(label: 'Pitch (X)', value: _gx),
-                      _AxisBadge(label: 'Roll (Y)', value: _gy),
-                      _AxisBadge(label: 'Yaw (Z)', value: _gz),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Gráfica animada con lecturas actuales de acelerómetro y giroscopio
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE1ECE6)),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF174B37).withValues(alpha: 0.045),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.show_chart_rounded, color: Color(0xFF159B68)),
-                      SizedBox(width: 8),
-                      Text(
-                        'Lecturas de movimiento',
-                        style: TextStyle(
-                          color: Color(0xFF18352A),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Magnitud actual de los sensores',
-                    style: TextStyle(color: Color(0xFF718078), fontSize: 11),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 112,
-                    width: double.infinity,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 850),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, progress, child) {
-                        return CustomPaint(
-                          painter: _SensorTrendPainter(
-                            values: [
-                              _ax.abs(), _ay.abs(), _az.abs(),
-                              _gx.abs(), _gy.abs(), _gz.abs(),
-                            ],
-                            progress: progress,
-                          ),
-                        );
-                      },
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 7),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Eje X', style: TextStyle(fontSize: 10, color: Color(0xFF718078))),
-                      Text('Eje Y', style: TextStyle(fontSize: 10, color: Color(0xFF718078))),
-                      Text('Eje Z', style: TextStyle(fontSize: 10, color: Color(0xFF718078))),
-                      Text('Giro X/Y/Z', style: TextStyle(fontSize: 10, color: Color(0xFF718078))),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _AxisBadge(label: 'Pitch (X)', value: _gx),
+                        _AxisBadge(label: 'Roll (Y)', value: _gy),
+                        _AxisBadge(label: 'Yaw (Z)', value: _gz),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 14),
 
-            // Botón Principal de Control
-            SizedBox(
-              height: 54,
-              child: _isWorkoutRunning
-                  ? FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: _stopAndSaveWorkout,
-                icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text(
-                  'Finalizar y Guardar Sesión',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              )
-                  : FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF159B68),
-                  foregroundColor: const Color(0xFFF5FAF7),
-                ),
-                onPressed: _startWorkout,
-                icon: const Icon(Icons.play_arrow_rounded, size: 28),
-                label: const Text(
-                  'Iniciar Entrenamiento',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+              // Gráfica animada con lecturas actuales
+              LiquidGlassCard(
+                padding: const EdgeInsets.all(16),
+                borderRadius: 22,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.show_chart_rounded,
+                            color: Color(0xFFFF5520)),
+                        SizedBox(width: 8),
+                        Text(
+                          'Lecturas de movimiento',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Magnitud actual de los sensores',
+                      style: TextStyle(color: Color(0xFF9A9AA2), fontSize: 11),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 112,
+                      width: double.infinity,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 850),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, progress, child) {
+                          return CustomPaint(
+                            painter: _SensorTrendPainter(
+                              values: [
+                                _ax.abs(),
+                                _ay.abs(),
+                                _az.abs(),
+                                _gx.abs(),
+                                _gy.abs(),
+                                _gz.abs(),
+                              ],
+                              progress: progress,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Eje X',
+                            style: TextStyle(
+                                fontSize: 10, color: Color(0xFF9A9AA2))),
+                        Text('Eje Y',
+                            style: TextStyle(
+                                fontSize: 10, color: Color(0xFF9A9AA2))),
+                        Text('Eje Z',
+                            style: TextStyle(
+                                fontSize: 10, color: Color(0xFF9A9AA2))),
+                        Text('Giro X/Y/Z',
+                            style: TextStyle(
+                                fontSize: 10, color: Color(0xFF9A9AA2))),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+
+              // Botón Principal de Control
+              SizedBox(
+                height: 54,
+                child: _isWorkoutRunning
+                    ? FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE63946),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: _stopAndSaveWorkout,
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: const Text(
+                    'Finalizar y Guardar Sesión',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                )
+                    : FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5520),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: _startWorkout,
+                  icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                  label: const Text(
+                    'Iniciar Entrenamiento',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -750,15 +746,9 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
+    return LiquidGlassCard(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE1ECE6)),
-      ),
+      borderRadius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -771,7 +761,7 @@ class _MetricCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF718078),
+                  color: Color(0xFF9A9AA2),
                 ),
               ),
             ],
@@ -782,7 +772,7 @@ class _MetricCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF18352A),
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 2),
@@ -808,7 +798,7 @@ class _AxisBadge extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF718078)),
+          style: const TextStyle(fontSize: 11, color: Color(0xFF9A9AA2)),
         ),
         const SizedBox(height: 4),
         Text(
@@ -817,7 +807,7 @@ class _AxisBadge extends StatelessWidget {
             fontSize: 15,
             fontWeight: FontWeight.bold,
             fontFeatures: [FontFeature.tabularFigures()],
-            color: Color(0xFF18352A),
+            color: Colors.white,
           ),
         ),
       ],
@@ -834,7 +824,7 @@ class _SensorTrendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = const Color(0xFFE8F0EB)
+      ..color = Colors.white.withValues(alpha: 0.08)
       ..strokeWidth = 1;
     for (var i = 0; i < 4; i++) {
       final y = size.height * i / 3;
@@ -842,7 +832,8 @@ class _SensorTrendPainter extends CustomPainter {
     }
 
     if (values.isEmpty) return;
-    final maxValue = math.max(1.0, values.reduce((a, b) => a > b ? a : b)).toDouble();
+    final maxValue =
+    math.max(1.0, values.reduce((a, b) => a > b ? a : b)).toDouble();
     final points = <Offset>[];
     for (var i = 0; i < values.length; i++) {
       final x = size.width * i / (values.length - 1);
@@ -851,32 +842,35 @@ class _SensorTrendPainter extends CustomPainter {
       points.add(Offset(x, y));
     }
 
-    final visibleCount = (points.length * progress).ceil().clamp(1, points.length).toInt();
+    final visibleCount =
+    (points.length * progress).ceil().clamp(1, points.length).toInt();
     final visible = points.take(visibleCount).toList();
-    final path = ui.Path()
-      ..moveTo(visible.first.dx, visible.first.dy);
+    final path = ui.Path()..moveTo(visible.first.dx, visible.first.dy);
     for (var i = 1; i < visible.length; i++) {
       final previous = visible[i - 1];
       final current = visible[i];
       final controlX = (previous.dx + current.dx) / 2;
-      path.cubicTo(controlX, previous.dy, controlX, current.dy, current.dx, current.dy);
+      path.cubicTo(
+          controlX, previous.dy, controlX, current.dy, current.dx, current.dy);
     }
 
     final linePaint = Paint()
-      ..color = const Color(0xFF159B68)
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFFF5520), Color(0xFFFF9F1C)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 3.2
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, linePaint);
 
-    final dotPaint = Paint()..color = const Color(0xFF159B68);
+    final dotPaint = Paint()..color = const Color(0xFFFF5520);
     for (final point in visible) {
       canvas.drawCircle(point, 3.5, dotPaint);
       canvas.drawCircle(
         point,
-        6,
+        6.5,
         Paint()
-          ..color = const Color(0xFF159B68).withValues(alpha: 0.13)
+          ..color = const Color(0xFFFF5520).withValues(alpha: 0.25)
           ..style = PaintingStyle.fill,
       );
     }

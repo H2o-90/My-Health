@@ -1,4 +1,4 @@
-
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
@@ -15,9 +15,9 @@ class _HomeShellState extends State<HomeShell> {
   int _selectedIndex = 0;
   int _historyRefreshToken = 0;
 
-  static const Color primaryGreen = Color(0xFF159B68);
-  static const Color darkGreen = Color(0xFF064E3B);
-  static const Color backgroundColor = Color(0xFFF5FAF7);
+  static const Color primaryOrange = Color(0xFFFF5520);
+  static const Color amberGlow = Color(0xFFFF9F1C);
+  static const Color backgroundColor = Color(0xFF0A0A0C);
 
   final List<String> _titles = [
     'Mi actividad',
@@ -29,9 +29,9 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-
+      extendBody: true,
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
@@ -41,7 +41,7 @@ class _HomeShellState extends State<HomeShell> {
             const Text(
               'MY HEALTH',
               style: TextStyle(
-                color: darkGreen,
+                color: primaryOrange,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2,
@@ -50,7 +50,7 @@ class _HomeShellState extends State<HomeShell> {
             Text(
               _titles[_selectedIndex],
               style: const TextStyle(
-                color: Color(0xFF174B37),
+                color: Colors.white,
                 fontSize: 23,
                 fontWeight: FontWeight.bold,
               ),
@@ -60,23 +60,31 @@ class _HomeShellState extends State<HomeShell> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Container(
-              width: 43,
-              height: 43,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD1FAE5),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Icon(
-                Icons.favorite_rounded,
-                color: darkGreen,
-                size: 25,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  width: 43,
+                  height: 43,
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(
+                      color: primaryOrange.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    color: primaryOrange,
+                    size: 24,
+                  ),
+                ),
               ),
             ),
           ),
         ],
       ),
-
       body: IndexedStack(
         index: _selectedIndex,
         children: [
@@ -88,96 +96,74 @@ class _HomeShellState extends State<HomeShell> {
               });
             },
           ),
-
           HistoryScreen(
             key: ValueKey(_historyRefreshToken),
           ),
-
           const ProfileScreen(),
         ],
       ),
-
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(25),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 15,
-              offset: const Offset(0, -4),
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF151519).withValues(alpha: 0.78),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  width: 1,
+                ),
+              ),
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(25),
-          ),
-          child: NavigationBar(
-            height: 75,
-            labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-              color: states.contains(WidgetState.selected) ? primaryGreen : const Color(0xFF718078),
-              fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 11,
-            )),
-            backgroundColor: Colors.white,
-            elevation: 0,
-
-            indicatorColor: const Color(0xFFD1FAE5),
-
-            labelBehavior:
-            NavigationDestinationLabelBehavior.alwaysShow,
-
-            selectedIndex: _selectedIndex,
-
-            onDestinationSelected: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(
-                  Icons.monitor_heart_outlined,
-                  size: 25,
+            child: NavigationBar(
+              height: 74,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              indicatorColor: primaryOrange.withValues(alpha: 0.22),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              labelTextStyle: WidgetStateProperty.resolveWith(
+                    (states) => TextStyle(
+                  color: states.contains(WidgetState.selected)
+                      ? primaryOrange
+                      : const Color(0xFF9A9AA2),
+                  fontWeight: states.contains(WidgetState.selected)
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  fontSize: 11,
                 ),
-                selectedIcon: Icon(
-                  Icons.monitor_heart_rounded,
-                  color: primaryGreen,
-                  size: 27,
-                ),
-                label: 'Actividad',
               ),
-
-              NavigationDestination(
-                icon: Icon(
-                  Icons.history_rounded,
-                  size: 25,
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.monitor_heart_outlined,
+                      size: 25, color: Color(0xFF9A9AA2)),
+                  selectedIcon: Icon(Icons.monitor_heart_rounded,
+                      color: primaryOrange, size: 27),
+                  label: 'Actividad',
                 ),
-                selectedIcon: Icon(
-                  Icons.history_rounded,
-                  color: primaryGreen,
-                  size: 27,
+                NavigationDestination(
+                  icon: Icon(Icons.history_rounded,
+                      size: 25, color: Color(0xFF9A9AA2)),
+                  selectedIcon: Icon(Icons.history_rounded,
+                      color: primaryOrange, size: 27),
+                  label: 'Historial',
                 ),
-                label: 'Historial',
-              ),
-
-              NavigationDestination(
-                icon: Icon(
-                  Icons.person_outline_rounded,
-                  size: 25,
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline_rounded,
+                      size: 25, color: Color(0xFF9A9AA2)),
+                  selectedIcon:
+                  Icon(Icons.person_rounded, color: primaryOrange, size: 27),
+                  label: 'Perfil',
                 ),
-                selectedIcon: Icon(
-                  Icons.person_rounded,
-                  color: primaryGreen,
-                  size: 27,
-                ),
-                label: 'Perfil',
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
